@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDPAI GPX into VIRB Edit Slicer & Telemetry Studio (12h AM/PM)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .leaflet-container {
+      background-color: #0b1120 !important;
+      font-family: inherit;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+        <i data-lucide="navigation-2" class="w-5 h-5 text-slate-950 stroke-[2.5]"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          DDPAI GPX into VIRB Edit
+          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">12h AM/PM Ready</span>
+        </h1>
+        <p class="text-xs text-slate-400">Dashcam NMEA & GPX Cutter with Garmin VIRB Edit Extensions</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2.5">
+      <button id="btn-open-instructions" class="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700">
+        <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span>Run Locally & Git Guide</span>
+      </button>
+      <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors border border-slate-700">
+        <i data-lucide="github" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 p-4 lg:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left Column: Source & AM/PM Controls (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col space-y-5">
+      
+      <!-- Upload Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl shadow-black/40">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <i data-lucide="file-up" class="w-4 h-4 text-emerald-400"></i>
+            1. Source GPS Track
+          </h2>
+          <span id="file-badge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hidden"></span>
+        </div>
+
+        <!-- Dropzone -->
+        <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-xl p-5 text-center transition-all cursor-pointer bg-slate-950/40 hover:bg-slate-800/20 group">
+          <input type="file" id="file-input" class="hidden" accept=".gpx,.txt,.log,.nmea,.git" />
+          <div class="w-11 h-11 mx-auto rounded-full bg-slate-800 group-hover:bg-emerald-500/10 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 transition-colors mb-2.5">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+          </div>
+          <p class="text-sm font-medium text-slate-200">
+            <span class="text-emerald-400 underline decoration-emerald-500/40 underline-offset-2">Click to upload</span> or drag and drop
+          </p>
+          <p class="text-xs text-slate-400 mt-1">Accepts XML <code class="text-slate-300">.gpx</code> or Dashcam raw logs (<code class="text-slate-300">$GPRMC / $GPGGA</code>)</p>
+        </div>
+
+        <!-- File Meta / Detected Range Summary (AM/PM) -->
+        <div id="file-summary" class="hidden mt-4 pt-4 border-t border-slate-800/80 space-y-2 text-xs">
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="text-slate-500">File Name:</span>
+            <span id="meta-filename" class="font-mono text-emerald-300 truncate max-w-[220px]"></span>
+          </div>
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="text-slate-500">Total Track Fixes:</span>
+            <span id="meta-points" class="font-mono font-medium"></span>
+          </div>
+          <div class="flex flex-col bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1 mt-2">
+            <div class="flex justify-between text-slate-300">
+              <span class="text-slate-400">Recorded Start:</span>
+              <span id="meta-start-12h" class="font-mono text-emerald-400 font-semibold text-[11px]"></span>
+            </div>
+            <div class="flex justify-between text-slate-300">
+              <span class="text-slate-400">Recorded End:</span>
+              <span id="meta-end-12h" class="font-mono text-emerald-400 font-semibold text-[11px]"></span>
+            </div>
+            <div class="flex justify-between text-slate-400 text-[10px] pt-1 border-t border-slate-800/80">
+              <span>Equivalent UTC:</span>
+              <span id="meta-utc-span" class="font-mono text-slate-400"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time Interval Selection Card with AM/PM Form -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl shadow-black/40 flex-1 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-emerald-400"></i>
+              2. Slicing Interval (12-Hour AM/PM)
+            </h2>
+            
+            <!-- Timezone Selector -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <label for="timezone-select" class="text-[11px] text-slate-400 pl-1">Zone:</label>
+              <select id="timezone-select" class="bg-slate-800 text-slate-200 text-xs rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500 border-none cursor-pointer">
+                <option value="LOCAL">Device Local</option>
+                <option value="UTC">UTC (Zulu)</option>
+                <option value="5.5" selected>IST (UTC+05:30)</option>
+                <option value="0">UTC+00:00</option>
+                <option value="1">CET (UTC+01:00)</option>
+                <option value="-5">EST (UTC-05:00)</option>
+                <option value="-7">PDT (UTC-07:00)</option>
+                <option value="-8">PST (UTC-08:00)</option>
+                <option value="8">SGT/CST (+08:00)</option>
+                <option value="9">JST (+09:00)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="grid grid-cols-3 gap-2 mb-4">
+            <button type="button" class="preset-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 text-xs font-medium rounded-lg border border-slate-700/60 transition-colors" data-preset="first-60">
+              First 60s
+            </button>
+            <button type="button" class="preset-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 text-xs font-medium rounded-lg border border-slate-700/60 transition-colors" data-preset="last-60">
+              Last 60s
+            </button>
+            <button type="button" class="preset-btn px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 text-xs font-medium rounded-lg border border-slate-700/60 transition-colors" data-preset="all">
+              Full Track
+            </button>
+          </div>
+
+          <!-- START TIME INPUT (12-Hour AM/PM Picker) -->
+          <div class="mb-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Start Time (12h)
+              </span>
+              <span id="start-utc-indicator" class="text-[10px] text-slate-500 font-mono">--:--:-- UTC</span>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-1.5 items-center">
+              <!-- Date picker -->
+              <div class="col-span-5">
+                <input type="date" id="start-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none disabled:opacity-40" disabled />
+              </div>
+
+              <!-- Time Spinners: HH : MM : SS -->
+              <div class="col-span-4 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono text-xs">
+                <input type="number" id="start-hh" min="1" max="12" placeholder="07" class="w-6 bg-transparent text-center focus:outline-none text-emerald-400 font-bold disabled:opacity-40" disabled />
+                <span class="text-slate-500">:</span>
+                <input type="number" id="start-mm" min="0" max="59" placeholder="47" class="w-6 bg-transparent text-center focus:outline-none text-slate-200 disabled:opacity-40" disabled />
+                <span class="text-slate-500">:</span>
+                <input type="number" id="start-ss" min="0" max="59" placeholder="48" class="w-6 bg-transparent text-center focus:outline-none text-slate-200 disabled:opacity-40" disabled />
+              </div>
+
+              <!-- AM/PM Toggle Button -->
+              <div class="col-span-3">
+                <button type="button" id="start-ampm" class="w-full py-1.5 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold font-mono transition-all disabled:opacity-40" disabled>
+                  PM
+                </button>
+              </div>
+            </div>
+            <p id="start-preview-label" class="text-[11px] text-emerald-400/90 font-mono mt-1.5">--</p>
+          </div>
+
+          <!-- END TIME INPUT (12-Hour AM/PM Picker) -->
+          <div class="mb-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span> End Time (12h)
+              </span>
+              <span id="end-utc-indicator" class="text-[10px] text-slate-500 font-mono">--:--:-- UTC</span>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-1.5 items-center">
+              <!-- Date picker -->
+              <div class="col-span-5">
+                <input type="date" id="end-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none disabled:opacity-40" disabled />
+              </div>
+
+              <!-- Time Spinners: HH : MM : SS -->
+              <div class="col-span-4 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono text-xs">
+                <input type="number" id="end-hh" min="1" max="12" placeholder="07" class="w-6 bg-transparent text-center focus:outline-none text-emerald-400 font-bold disabled:opacity-40" disabled />
+                <span class="text-slate-500">:</span>
+                <input type="number" id="end-mm" min="0" max="59" placeholder="48" class="w-6 bg-transparent text-center focus:outline-none text-slate-200 disabled:opacity-40" disabled />
+                <span class="text-slate-500">:</span>
+                <input type="number" id="end-ss" min="0" max="59" placeholder="48" class="w-6 bg-transparent text-center focus:outline-none text-slate-200 disabled:opacity-40" disabled />
+              </div>
+
+              <!-- AM/PM Toggle Button -->
+              <div class="col-span-3">
+                <button type="button" id="end-ampm" class="w-full py-1.5 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold font-mono transition-all disabled:opacity-40" disabled>
+                  PM
+                </button>
+              </div>
+            </div>
+            <p id="end-preview-label" class="text-[11px] text-emerald-400/90 font-mono mt-1.5">--</p>
+          </div>
+
+          <!-- Quick Duration Increments -->
+          <div class="flex items-center space-x-2">
+            <span class="text-[11px] text-slate-500">Quick Extend:</span>
+            <button id="btn-add-30s" type="button" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all disabled:opacity-40" disabled>
+              +30s
+            </button>
+            <button id="btn-add-60s" type="button" class="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-semibold disabled:opacity-40" disabled>
+              +60s (1 min)
+            </button>
+            <button id="btn-add-300s" type="button" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all disabled:opacity-40" disabled>
+              +5 min
+            </button>
+          </div>
+
+          <!-- Explicit Error / Validation Notification -->
+          <div id="alert-box" class="hidden mt-4 p-3 rounded-xl text-xs flex items-start space-x-2.5">
+            <i id="alert-icon" data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i>
+            <div id="alert-message" class="flex-1 font-medium leading-relaxed"></div>
+          </div>
+        </div>
+
+        <!-- Export Action Area -->
+        <div class="pt-5 border-t border-slate-800 mt-5 space-y-3">
+          <div class="flex items-center space-x-2">
+            <input type="text" id="output-filename" placeholder="sliced_track.gpx" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 flex-1 focus:outline-none focus:border-emerald-500" value="virb_edit_track.gpx" />
+          </div>
+          <button id="btn-export" type="button" class="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="download" class="w-4 h-4 stroke-[2.5]"></i>
+            <span>Export VIRB Edit GPX (12h Synced)</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Map & Live Sliced Telemetry (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col space-y-5">
+      
+      <!-- Metrics Summary Ribbon -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+          <p class="text-[11px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="ruler" class="w-3.5 h-3.5 text-emerald-400"></i> Distance
+          </p>
+          <p id="stat-distance" class="text-xl font-bold font-mono text-white mt-1">-- <span class="text-xs text-slate-400 font-normal">km</span></p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+          <p class="text-[11px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="timer" class="w-3.5 h-3.5 text-teal-400"></i> Sliced Duration
+          </p>
+          <p id="stat-duration" class="text-xl font-bold font-mono text-white mt-1">-- <span class="text-xs text-slate-400 font-normal">sec</span></p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+          <p class="text-[11px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="gauge" class="w-3.5 h-3.5 text-amber-400"></i> Max Speed
+          </p>
+          <p id="stat-max-speed" class="text-xl font-bold font-mono text-white mt-1">-- <span class="text-xs text-slate-400 font-normal">km/h</span></p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md">
+          <p class="text-[11px] font-medium uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="mountain" class="w-3.5 h-3.5 text-blue-400"></i> Avg Speed
+          </p>
+          <p id="stat-avg-speed" class="text-xl font-bold font-mono text-white mt-1">-- <span class="text-xs text-slate-400 font-normal">km/h</span></p>
+        </div>
+      </div>
+
+      <!-- Map Container -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col min-h-[420px]">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="map" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Route Map Preview</span>
+          </div>
+          <div class="flex items-center space-x-3 text-xs text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <span class="w-3 h-1 bg-slate-600 rounded-full inline-block"></span> Full Track
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-3 h-1.5 bg-emerald-400 rounded-full inline-block"></span> Sliced Range
+            </span>
+          </div>
+        </div>
+
+        <div id="map" class="w-full flex-1 rounded-xl overflow-hidden border border-slate-800 relative z-10"></div>
+      </div>
+
+      <!-- Sliced Telemetry Points Log Table (AM/PM) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl max-h-56 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="list" class="w-3.5 h-3.5 text-emerald-400"></i> Sliced Telemetry Fixes (12h AM/PM & UTC)
+          </span>
+          <span id="points-count-badge" class="text-xs font-mono text-slate-400">0 fixes selected</span>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+          <table class="w-full text-left text-[11px] font-mono text-slate-300">
+            <thead class="text-[10px] uppercase text-slate-500 bg-slate-950/80 sticky top-0">
+              <tr>
+                <th class="py-1.5 px-2">#</th>
+                <th class="py-1.5 px-2">Selected TZ (AM/PM)</th>
+                <th class="py-1.5 px-2">UTC (AM/PM)</th>
+                <th class="py-1.5 px-2">Latitude</th>
+                <th class="py-1.5 px-2">Longitude</th>
+                <th class="py-1.5 px-2">Speed (km/h)</th>
+                <th class="py-1.5 px-2">Ele (m)</th>
+              </tr>
+            </thead>
+            <tbody id="points-tbody" class="divide-y divide-slate-800/60">
+              <tr>
+                <td colspan="7" class="text-center py-6 text-slate-600 font-sans">No file uploaded or no valid time slice selected.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Instructions Modal (Git & Local Run) -->
+  <div id="instructions-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button id="btn-close-instructions" class="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+          <i data-lucide="terminal" class="w-5 h-5 text-emerald-400"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">How to Run Locally & Push to GitHub</h3>
+          <p class="text-xs text-slate-400">Simple standalone workflow for your 12-hour GPS Slicer</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-sm text-slate-300">
+        <div>
+          <h4 class="font-semibold text-emerald-400 text-xs uppercase tracking-wider mb-1">Step 1: Save the File</h4>
+          <p class="text-xs text-slate-400">Save this complete code as <code class="bg-slate-950 px-1.5 py-0.5 rounded text-emerald-300 font-mono">index.html</code>.</p>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-emerald-400 text-xs uppercase tracking-wider mb-1">Step 2: Run Locally</h4>
+          <p class="text-xs text-slate-400 mb-1">Double click <code class="bg-slate-950 px-1.5 py-0.5 rounded text-emerald-300 font-mono">index.html</code> to open it in Chrome, Edge, Safari, or Firefox.</p>
+          <div class="bg-slate-950 rounded-xl p-3 font-mono text-xs text-emerald-300">
+            <code>python -m http.server 8000</code>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Open <code class="text-emerald-400 font-mono">http://localhost:8000</code> in your browser.</p>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-emerald-400 text-xs uppercase tracking-wider mb-1">Step 3: Push to GitHub</h4>
+          <div class="bg-slate-950 rounded-xl p-3 font-mono text-xs text-emerald-300 space-y-1">
+            <p>git init</p>
+            <p>git add index.html</p>
+            <p>git commit -m "feat: 12-hour AM/PM GPS track slicer for VIRB Edit"</p>
+            <p>git branch -M main</p>
+            <p>git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git</p>
+            <p>git push -u origin main</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-emerald-400 text-xs uppercase tracking-wider mb-1">Step 4: Enable GitHub Pages</h4>
+          <p class="text-xs text-slate-400">Go to your GitHub repo &rarr; <strong>Settings</strong> &rarr; <strong>Pages</strong> &rarr; set Branch to <strong>main</strong> &rarr; Save. Your app will be live at <code class="text-emerald-400 font-mono">https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/</code>.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+        <button id="btn-modal-done" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-xl transition-colors">
+          Got it
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // Global State
+    const state = {
+      rawPoints: [], // items: { time: Date (UTC), lat, lon, ele, speed, course }
+      slicedPoints: [],
+      fileMinTime: null,
+      fileMaxTime: null,
+      map: null,
+      fullPolyline: null,
+      slicedPolyline: null,
+      startMarker: null,
+      endMarker: null,
+    };
+
+    lucide.createIcons();
+
+    // Initialize Map
+    function initMap() {
+      state.map = L.map('map', {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([13.02, 77.75], 11);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      }).addTo(state.map);
+    }
+
+    // Convert decimal latitude/longitude from NMEA degrees and minutes
+    function nmeaToDecimal(coordStr, direction) {
+      if (!coordStr || !direction) return null;
+      const num = parseFloat(coordStr);
+      if (isNaN(num)) return null;
+
+      const degDigits = (direction === 'E' || direction === 'W') ? 3 : 2;
+      const deg = parseInt(coordStr.substring(0, degDigits), 10);
+      const minutes = parseFloat(coordStr.substring(degDigits));
+      let dec = deg + (minutes / 60.0);
+
+      if (direction === 'S' || direction === 'W') {
+        dec = -dec;
+      }
+      return dec;
+    }
+
+    // 12-Hour AM/PM Formatter: returns "hh:mm:ss AM/PM"
+    function formatTime12h(date, offsetHours = 0) {
+      if (!date) return "--:--:-- --";
+      const adjusted = new Date(date.getTime() + offsetHours * 3600000);
+      let hours = adjusted.getUTCHours();
+      const minutes = adjusted.getUTCMinutes();
+      const seconds = adjusted.getUTCSeconds();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 0 hour should be 12
+
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)} ${ampm}`;
+    }
+
+    // Full Date + 12-Hour AM/PM Formatter: "YYYY-MM-DD hh:mm:ss AM/PM"
+    function formatDateTime12h(date, offsetHours = 0) {
+      if (!date) return "--";
+      const adjusted = new Date(date.getTime() + offsetHours * 3600000);
+      const y = adjusted.getUTCFullYear();
+      const m = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjusted.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d} ${formatTime12h(date, offsetHours)}`;
+    }
+
+    // Deconstruct Date into 12h parts for inputs
+    function get12hComponents(date, offsetHours = 0) {
+      const adjusted = new Date(date.getTime() + offsetHours * 3600000);
+      const y = adjusted.getUTCFullYear();
+      const m = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjusted.getUTCDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
+      let hours = adjusted.getUTCHours();
+      const minutes = adjusted.getUTCMinutes();
+      const seconds = adjusted.getUTCSeconds();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+
+      return {
+        dateStr,
+        hh: String(hours).padStart(2, '0'),
+        mm: String(minutes).padStart(2, '0'),
+        ss: String(seconds).padStart(2, '0'),
+        ampm
+      };
+    }
+
+    // Reconstruct UTC Date from 12h input components and timezone offset
+    function buildDateFrom12h(dateStr, hhStr, mmStr, ssStr, ampm, offsetHours) {
+      if (!dateStr) return null;
+      let hh = parseInt(hhStr, 10);
+      const mm = parseInt(mmStr, 10);
+      const ss = parseInt(ssStr, 10);
+
+      if (isNaN(hh) || isNaN(mm) || isNaN(ss)) return null;
+
+      // Normalize 12h to 24h (0 - 23)
+      if (ampm === 'PM' && hh < 12) hh += 12;
+      if (ampm === 'AM' && hh === 12) hh = 0;
+
+      const pad = (n) => String(n).padStart(2, '0');
+      const isoStr = `${dateStr}T${pad(hh)}:${pad(mm)}:${pad(ss)}Z`;
+      const baseDate = new Date(isoStr);
+
+      if (isNaN(baseDate.getTime())) return null;
+
+      // Subtract timezone offset to get original UTC Date
+      return new Date(baseDate.getTime() - offsetHours * 3600000);
+    }
+
+    function getSelectedOffset() {
+      const tzVal = document.getElementById("timezone-select").value;
+      if (tzVal === "LOCAL") {
+        return -new Date().getTimezoneOffset() / 60.0;
+      }
+      return parseFloat(tzVal);
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    // NMEA Log Parser
+    function parseNmeaLog(text) {
+      const lines = text.split(/\r?\n/);
+      const points = [];
+      let currentDateStr = null;
+
+      for (const line of lines) {
+        if (line.startsWith('$GPSCAMTIME')) {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length > 1 && parts[1].length >= 8) {
+            const y = parts[1].substring(0, 4);
+            const m = parts[1].substring(4, 6);
+            const d = parts[1].substring(6, 8);
+            currentDateStr = `${d}${m}${y.slice(-2)}`;
+          }
+        }
+        if (line.startsWith('$GPRMC')) {
+          const p = line.split(',');
+          if (p.length > 9 && p[9] && p[9].length === 6) {
+            currentDateStr = p[9];
+            break;
+          }
+        }
+      }
+
+      if (!currentDateStr) currentDateStr = "221026"; // default Oct 22, 2026
+
+      let pendingRmc = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line.startsWith('$GP')) continue;
+
+        if (line.startsWith('$GPRMC')) {
+          const parts = line.split(',');
+          const timeStr = parts[1];
+          const status = parts[2];
+          const latStr = parts[3];
+          const latDir = parts[4];
+          const lonStr = parts[5];
+          const lonDir = parts[6];
+          const speedKnots = parseFloat(parts[7]) || 0;
+          const courseDeg = parseFloat(parts[8]) || 0;
+          const dateStr = parts[9] || currentDateStr;
+
+          if (dateStr && dateStr.length === 6) currentDateStr = dateStr;
+
+          if (timeStr && timeStr.length >= 6 && status === 'A' && latStr && lonStr) {
+            const lat = nmeaToDecimal(latStr, latDir);
+            const lon = nmeaToDecimal(lonStr, lonDir);
+
+            const hh = parseInt(timeStr.substring(0, 2), 10);
+            const mm = parseInt(timeStr.substring(2, 4), 10);
+            const ss = parseInt(timeStr.substring(4, 6), 10);
+            const day = parseInt(currentDateStr.substring(0, 2), 10);
+            const month = parseInt(currentDateStr.substring(2, 4), 10) - 1;
+            let year = parseInt(currentDateStr.substring(4, 6), 10);
+            year += (year < 70) ? 2000 : 1900;
+
+            const date = new Date(Date.UTC(year, month, day, hh, mm, ss));
+            const speedMps = speedKnots * 0.514444;
+
+            pendingRmc = {
+              time: date,
+              lat,
+              lon,
+              speed: speedMps,
+              course: courseDeg,
+              ele: 0
+            };
+          }
+        } else if (line.startsWith('$GPGGA')) {
+          const parts = line.split(',');
+          const timeStr = parts[1];
+          const latStr = parts[2];
+          const latDir = parts[3];
+          const lonStr = parts[4];
+          const lonDir = parts[5];
+          const fixQuality = parseInt(parts[6], 10) || 0;
+          const altitude = parseFloat(parts[9]) || 0;
+
+          if (pendingRmc) {
+            pendingRmc.ele = altitude;
+            points.push(pendingRmc);
+            pendingRmc = null;
+          } else if (timeStr && timeStr.length >= 6 && fixQuality > 0 && latStr && lonStr) {
+            const lat = nmeaToDecimal(latStr, latDir);
+            const lon = nmeaToDecimal(lonStr, lonDir);
+            const hh = parseInt(timeStr.substring(0, 2), 10);
+            const mm = parseInt(timeStr.substring(2, 4), 10);
+            const ss = parseInt(timeStr.substring(4, 6), 10);
+            const day = parseInt(currentDateStr.substring(0, 2), 10);
+            const month = parseInt(currentDateStr.substring(2, 4), 10) - 1;
+            let year = parseInt(currentDateStr.substring(4, 6), 10);
+            year += (year < 70) ? 2000 : 1900;
+            const date = new Date(Date.UTC(year, month, day, hh, mm, ss));
+
+            points.push({
+              time: date,
+              lat,
+              lon,
+              ele: altitude,
+              speed: 0,
+              course: 0
+            });
+          }
+        }
+      }
+
+      return points;
+    }
+
+    // Standard XML GPX Parser
+    function parseXmlGpx(text) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(text, "application/xml");
+      if (xmlDoc.querySelector("parsererror")) return null;
+
+      const points = [];
+      const trkpts = xmlDoc.querySelectorAll("trkpt");
+
+      trkpts.forEach(pt => {
+        const lat = parseFloat(pt.getAttribute("lat"));
+        const lon = parseFloat(pt.getAttribute("lon"));
+        const timeEl = pt.querySelector("time");
+        const eleEl = pt.querySelector("ele");
+        const speedEl = pt.querySelector("speed");
+        const courseEl = pt.querySelector("course");
+
+        if (!isNaN(lat) && !isNaN(lon) && timeEl) {
+          const time = new Date(timeEl.textContent.trim());
+          const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+          let speed = speedEl ? parseFloat(speedEl.textContent) : 0;
+          let course = courseEl ? parseFloat(courseEl.textContent) : 0;
+
+          const tpxSpeed = pt.querySelector("speed, TrackPointExtension speed, gpxtpx\\:speed");
+          const tpxCourse = pt.querySelector("course, TrackPointExtension course, gpxtpx\\:course");
+          if (tpxSpeed && !isNaN(parseFloat(tpxSpeed.textContent))) speed = parseFloat(tpxSpeed.textContent);
+          if (tpxCourse && !isNaN(parseFloat(tpxCourse.textContent))) course = parseFloat(tpxCourse.textContent);
+
+          points.push({
+            time,
+            lat,
+            lon,
+            ele: isNaN(ele) ? 0 : ele,
+            speed: isNaN(speed) ? 0 : speed,
+            course: isNaN(course) ? 0 : course,
+          });
+        }
+      });
+
+      return points;
+    }
+
+    // Populate the 12-Hour picker controls
+    function set12hInput(prefix, date, offsetHours) {
+      const parts = get12hComponents(date, offsetHours);
+      document.getElementById(`${prefix}-date`).value = parts.dateStr;
+      document.getElementById(`${prefix}-hh`).value = parts.hh;
+      document.getElementById(`${prefix}-mm`).value = parts.mm;
+      document.getElementById(`${prefix}-ss`).value = parts.ss;
+      
+      const ampmBtn = document.getElementById(`${prefix}-ampm`);
+      ampmBtn.textContent = parts.ampm;
+      if (parts.ampm === 'PM') {
+        ampmBtn.classList.remove('bg-amber-500/10', 'text-amber-400', 'border-amber-500/30');
+        ampmBtn.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30');
+      } else {
+        ampmBtn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30');
+        ampmBtn.classList.add('bg-amber-500/10', 'text-amber-400', 'border-amber-500/30');
+      }
+
+      updateUtcHints();
+    }
+
+    // Read current 12-Hour picker values into UTC Date
+    function get12hInput(prefix, offsetHours) {
+      const dateStr = document.getElementById(`${prefix}-date`).value;
+      const hh = document.getElementById(`${prefix}-hh`).value;
+      const mm = document.getElementById(`${prefix}-mm`).value;
+      const ss = document.getElementById(`${prefix}-ss`).value;
+      const ampm = document.getElementById(`${prefix}-ampm`).textContent.trim();
+      return buildDateFrom12h(dateStr, hh, mm, ss, ampm, offsetHours);
+    }
+
+    function updateUtcHints() {
+      const offset = getSelectedOffset();
+      const startDate = get12hInput('start', offset);
+      const endDate = get12hInput('end', offset);
+
+      if (startDate) {
+        document.getElementById('start-utc-indicator').textContent = `${formatTime12h(startDate, 0)} UTC`;
+        document.getElementById('start-preview-label').textContent = `${formatDateTime12h(startDate, offset)} (Selected Zone)`;
+      }
+      if (endDate) {
+        document.getElementById('end-utc-indicator').textContent = `${formatTime12h(endDate, 0)} UTC`;
+        document.getElementById('end-preview-label').textContent = `${formatDateTime12h(endDate, offset)} (Selected Zone)`;
+      }
+    }
+
+    // Process file
+    function processFile(file) {
+      showAlert('', 'clear');
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const content = e.target.result;
+        let points = [];
+
+        if (content.includes("<?xml") || content.includes("<gpx")) {
+          points = parseXmlGpx(content);
+        }
+
+        if (!points || points.length === 0) {
+          points = parseNmeaLog(content);
+        }
+
+        if (!points || points.length === 0) {
+          showAlert("Could not find any valid GPS track coordinates or timestamps in this file. Please verify the file contains GPX trackpoints or NMEA $GPRMC sentences.", "error");
+          return;
+        }
+
+        points.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+        const uniquePoints = [];
+        const seen = new Set();
+        for (const pt of points) {
+          const t = pt.time.getTime();
+          if (!seen.has(t)) {
+            seen.add(t);
+            uniquePoints.push(pt);
+          }
+        }
+
+        state.rawPoints = uniquePoints;
+        state.fileMinTime = state.rawPoints[0].time;
+        state.fileMaxTime = state.rawPoints[state.rawPoints.length - 1].time;
+
+        // UI Metadata update with 12h AM/PM
+        const offset = getSelectedOffset();
+        document.getElementById("file-badge").textContent = `${state.rawPoints.length} Fixes`;
+        document.getElementById("file-badge").classList.remove("hidden");
+        document.getElementById("meta-filename").textContent = file.name;
+        document.getElementById("meta-points").textContent = state.rawPoints.length.toLocaleString();
+        
+        document.getElementById("meta-start-12h").textContent = formatDateTime12h(state.fileMinTime, offset);
+        document.getElementById("meta-end-12h").textContent = formatDateTime12h(state.fileMaxTime, offset);
+        document.getElementById("meta-utc-span").textContent = `${formatTime12h(state.fileMinTime, 0)} to ${formatTime12h(state.fileMaxTime, 0)} UTC`;
+        document.getElementById("file-summary").classList.remove("hidden");
+
+        // Enable inputs
+        ['start', 'end'].forEach(p => {
+          document.getElementById(`${p}-date`).disabled = false;
+          document.getElementById(`${p}-hh`).disabled = false;
+          document.getElementById(`${p}-mm`).disabled = false;
+          document.getElementById(`${p}-ss`).disabled = false;
+          document.getElementById(`${p}-ampm`).disabled = false;
+        });
+        document.getElementById("btn-add-30s").disabled = false;
+        document.getElementById("btn-add-60s").disabled = false;
+        document.getElementById("btn-add-300s").disabled = false;
+
+        // Default to full range
+        applyPreset("all");
+        drawFullTrack();
+      };
+
+      reader.onerror = () => showAlert("Failed to read the file.", "error");
+      reader.readAsText(file);
+    }
+
+    function drawFullTrack() {
+      if (!state.rawPoints || state.rawPoints.length === 0) return;
+      const latlngs = state.rawPoints.map(p => [p.lat, p.lon]);
+
+      if (state.fullPolyline) state.map.removeLayer(state.fullPolyline);
+
+      state.fullPolyline = L.polyline(latlngs, {
+        color: '#64748b',
+        weight: 3,
+        opacity: 0.45,
+        dashArray: '4, 4'
+      }).addTo(state.map);
+
+      state.map.fitBounds(state.fullPolyline.getBounds(), { padding: [30, 30] });
+    }
+
+    function applyPreset(type) {
+      if (!state.rawPoints.length) return;
+      const offset = getSelectedOffset();
+
+      let startTime, endTime;
+      if (type === "first-60") {
+        startTime = state.fileMinTime;
+        endTime = new Date(Math.min(state.fileMinTime.getTime() + 60000, state.fileMaxTime.getTime()));
+      } else if (type === "last-60") {
+        endTime = state.fileMaxTime;
+        startTime = new Date(Math.max(state.fileMaxTime.getTime() - 60000, state.fileMinTime.getTime()));
+      } else { // "all"
+        startTime = state.fileMinTime;
+        endTime = state.fileMaxTime;
+      }
+
+      set12hInput('start', startTime, offset);
+      set12hInput('end', endTime, offset);
+      updateSlicedSegment();
+    }
+
+    // Filter points and validate range
+    function updateSlicedSegment() {
+      showAlert('', 'clear');
+      if (!state.rawPoints.length) return;
+
+      const offset = getSelectedOffset();
+      const startDate = get12hInput('start', offset);
+      const endDate = get12hInput('end', offset);
+
+      updateUtcHints();
+
+      if (!startDate || !endDate) return;
+
+      // Check 1: Start must be before End
+      if (startDate >= endDate) {
+        showAlert(`Start Time (${formatTime12h(startDate, offset)}) must be strictly before End Time (${formatTime12h(endDate, offset)}).`, "error");
+        clearSlicePreview();
+        return;
+      }
+
+      // Check 2: Range existence check
+      const fileMin = state.fileMinTime;
+      const fileMax = state.fileMaxTime;
+
+      if (endDate < fileMin || startDate > fileMax) {
+        showAlert(`Error: The selected time (${formatTime12h(startDate, offset)} to ${formatTime12h(endDate, offset)}) does not exist in this GPS file. The file only covers from ${formatDateTime12h(fileMin, offset)} to ${formatDateTime12h(fileMax, offset)}.`, "error");
+        clearSlicePreview();
+        return;
+      }
+
+      // Slicing points within interval
+      const sliced = state.rawPoints.filter(p => p.time >= startDate && p.time <= endDate);
+
+      if (sliced.length === 0) {
+        showAlert(`No GPS fixes recorded between ${formatTime12h(startDate, offset)} and ${formatTime12h(endDate, offset)}. Check whether AM/PM or timezone offset is correctly selected.`, "warning");
+        clearSlicePreview();
+        return;
+      }
+
+      state.slicedPoints = sliced;
+      renderSlicedData();
+    }
+
+    function clearSlicePreview() {
+      state.slicedPoints = [];
+      if (state.slicedPolyline) state.map.removeLayer(state.slicedPolyline);
+      if (state.startMarker) state.map.removeLayer(state.startMarker);
+      if (state.endMarker) state.map.removeLayer(state.endMarker);
+
+      document.getElementById("stat-distance").innerHTML = `-- <span class="text-xs text-slate-400 font-normal">km</span>`;
+      document.getElementById("stat-duration").innerHTML = `-- <span class="text-xs text-slate-400 font-normal">sec</span>`;
+      document.getElementById("stat-max-speed").innerHTML = `-- <span class="text-xs text-slate-400 font-normal">km/h</span>`;
+      document.getElementById("stat-avg-speed").innerHTML = `-- <span class="text-xs text-slate-400 font-normal">km/h</span>`;
+      document.getElementById("points-count-badge").textContent = `0 fixes selected`;
+      document.getElementById("points-tbody").innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-600 font-sans">No valid sliced points found for this range.</td></tr>`;
+    }
+
+    function renderSlicedData() {
+      const pts = state.slicedPoints;
+      if (!pts || pts.length === 0) return;
+
+      const offset = getSelectedOffset();
+      let totalDistKm = 0;
+      let maxSpeedMps = 0;
+      let speedSum = 0;
+
+      for (let i = 0; i < pts.length; i++) {
+        if (i > 0) {
+          totalDistKm += haversine(pts[i-1].lat, pts[i-1].lon, pts[i].lat, pts[i].lon);
+        }
+        if (pts[i].speed > maxSpeedMps) maxSpeedMps = pts[i].speed;
+        speedSum += pts[i].speed;
+      }
+
+      const durationSec = Math.round((pts[pts.length - 1].time - pts[0].time) / 1000);
+      const maxSpeedKmh = (maxSpeedMps * 3.6).toFixed(1);
+      const avgSpeedKmh = pts.length ? ((speedSum / pts.length) * 3.6).toFixed(1) : "0.0";
+
+      document.getElementById("stat-distance").innerHTML = `${totalDistKm.toFixed(2)} <span class="text-xs text-slate-400 font-normal">km</span>`;
+      document.getElementById("stat-duration").innerHTML = `${durationSec} <span class="text-xs text-slate-400 font-normal">sec</span>`;
+      document.getElementById("stat-max-speed").innerHTML = `${maxSpeedKmh} <span class="text-xs text-slate-400 font-normal">km/h</span>`;
+      document.getElementById("stat-avg-speed").innerHTML = `${avgSpeedKmh} <span class="text-xs text-slate-400 font-normal">km/h</span>`;
+      document.getElementById("points-count-badge").textContent = `${pts.length} fixes selected`;
+
+      // Map Sliced Polyline
+      if (state.slicedPolyline) state.map.removeLayer(state.slicedPolyline);
+      if (state.startMarker) state.map.removeLayer(state.startMarker);
+      if (state.endMarker) state.map.removeLayer(state.endMarker);
+
+      const latlngs = pts.map(p => [p.lat, p.lon]);
+
+      state.slicedPolyline = L.polyline(latlngs, {
+        color: '#10b981',
+        weight: 5,
+        opacity: 0.95,
+        lineCap: 'round',
+      }).addTo(state.map);
+
+      // Start & End Markers with 12h Tooltip
+      const startIcon = L.divIcon({
+        className: 'custom-start-marker',
+        html: `<div class="w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-lg shadow-emerald-500/50"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+
+      const endIcon = L.divIcon({
+        className: 'custom-end-marker',
+        html: `<div class="w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow-lg shadow-rose-500/50"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+
+      state.startMarker = L.marker([pts[0].lat, pts[0].lon], { icon: startIcon })
+        .bindTooltip(`Start: ${formatTime12h(pts[0].time, offset)}`, { permanent: false, direction: 'top' })
+        .addTo(state.map);
+
+      state.endMarker = L.marker([pts[pts.length - 1].lat, pts[pts.length - 1].lon], { icon: endIcon })
+        .bindTooltip(`End: ${formatTime12h(pts[pts.length - 1].time, offset)}`, { permanent: false, direction: 'top' })
+        .addTo(state.map);
+
+      state.map.fitBounds(state.slicedPolyline.getBounds(), { padding: [40, 40] });
+
+      // Telemetry Points Table (Displaying both 12h and UTC)
+      const tbody = document.getElementById("points-tbody");
+      tbody.innerHTML = '';
+      
+      const previewPts = pts.slice(0, 100);
+      previewPts.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-800/40 transition-colors";
+        tr.innerHTML = `
+          <td class="py-1 px-2 text-slate-500">${idx + 1}</td>
+          <td class="py-1 px-2 text-emerald-400 font-semibold">${formatTime12h(p.time, offset)}</td>
+          <td class="py-1 px-2 text-slate-400">${formatTime12h(p.time, 0)}</td>
+          <td class="py-1 px-2">${p.lat.toFixed(6)}</td>
+          <td class="py-1 px-2">${p.lon.toFixed(6)}</td>
+          <td class="py-1 px-2 text-amber-300 font-semibold">${(p.speed * 3.6).toFixed(1)}</td>
+          <td class="py-1 px-2 text-blue-300">${p.ele.toFixed(1)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (pts.length > 100) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="7" class="text-center py-2 text-slate-500 text-[10px] italic">... and ${pts.length - 100} more telemetry fixes</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Garmin VIRB Edit GPX Generator
+    function generateVirbEditGpx(points) {
+      const header = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="DDPAI GPX into VIRB Edit - 12h AM/PM VIRB Edit Compatible"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd
+                         http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">
+  <metadata>
+    <name>Exported Sliced Track for Garmin VIRB Edit</name>
+    <time>${new Date().toISOString()}</time>
+  </metadata>
+  <trk>
+    <name>Telemetry Track</name>
+    <trkseg>`;
+
+      const body = points.map(p => {
+        const timeIso = p.time.toISOString(); // Garmin VIRB Edit requires UTC ISO-8601
+        return `      <trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">
+        <ele>${p.ele.toFixed(2)}</ele>
+        <time>${timeIso}</time>
+        <speed>${p.speed.toFixed(3)}</speed>
+        <course>${p.course.toFixed(2)}</course>
+        <extensions>
+          <gpxtpx:TrackPointExtension>
+            <gpxtpx:speed>${p.speed.toFixed(3)}</gpxtpx:speed>
+            <gpxtpx:course>${p.course.toFixed(2)}</gpxtpx:course>
+          </gpxtpx:TrackPointExtension>
+        </extensions>
+      </trkpt>`;
+      }).join('\n');
+
+      const footer = `
+    </trkseg>
+  </trk>
+</gpx>`;
+
+      return header + '\n' + body + footer;
+    }
+
+    function downloadBlob(content, filename, contentType) {
+      const blob = new Blob([content], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "track.gpx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function showAlert(msg, type = "error") {
+      const box = document.getElementById("alert-box");
+      const text = document.getElementById("alert-message");
+      const icon = document.getElementById("alert-icon");
+
+      if (type === "clear") {
+        box.classList.add("hidden");
+        return;
+      }
+
+      box.classList.remove("hidden", "bg-red-500/10", "text-red-400", "border-red-500/20", "bg-amber-500/10", "text-amber-400", "border-amber-500/20");
+
+      if (type === "error") {
+        box.classList.add("bg-red-500/10", "text-red-400", "border", "border-red-500/20");
+        icon.setAttribute("data-lucide", "alert-triangle");
+      } else {
+        box.classList.add("bg-amber-500/10", "text-amber-400", "border", "border-amber-500/20");
+        icon.setAttribute("data-lucide", "alert-circle");
+      }
+
+      text.textContent = msg;
+      lucide.createIcons();
+    }
+
+    // Initialize Event Handlers
+    window.addEventListener("DOMContentLoaded", () => {
+      initMap();
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("file-input");
+
+      dropzone.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+          processFile(e.target.files[0]);
+        }
+      });
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.add("border-emerald-500", "bg-slate-800/40");
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove("border-emerald-500", "bg-slate-800/40");
+        });
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          processFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Timezone change
+      document.getElementById("timezone-select").addEventListener("change", () => {
+        if (state.rawPoints.length) {
+          const offset = getSelectedOffset();
+          document.getElementById("meta-start-12h").textContent = formatDateTime12h(state.fileMinTime, offset);
+          document.getElementById("meta-end-12h").textContent = formatDateTime12h(state.fileMaxTime, offset);
+          document.getElementById("meta-utc-span").textContent = `${formatTime12h(state.fileMinTime, 0)} to ${formatTime12h(state.fileMaxTime, 0)} UTC`;
+          applyPreset("all");
+        }
+      });
+
+      // AM/PM Toggle Buttons
+      ['start', 'end'].forEach(p => {
+        const btn = document.getElementById(`${p}-ampm`);
+        btn.addEventListener("click", () => {
+          const current = btn.textContent.trim();
+          const next = current === 'AM' ? 'PM' : 'AM';
+          btn.textContent = next;
+          if (next === 'PM') {
+            btn.classList.remove('bg-amber-500/10', 'text-amber-400', 'border-amber-500/30');
+            btn.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30');
+          } else {
+            btn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/30');
+            btn.classList.add('bg-amber-500/10', 'text-amber-400', 'border-amber-500/30');
+          }
+          updateSlicedSegment();
+        });
+
+        // Numeric clamping & auto-update
+        ['hh', 'mm', 'ss'].forEach(unit => {
+          const input = document.getElementById(`${p}-${unit}`);
+          input.addEventListener("input", () => {
+            let val = parseInt(input.value, 10);
+            if (unit === 'hh') {
+              if (val > 12) input.value = 12;
+              if (val < 1 && input.value !== "") input.value = 1;
+            } else {
+              if (val > 59) input.value = 59;
+              if (val < 0 && input.value !== "") input.value = 0;
+            }
+            updateSlicedSegment();
+          });
+        });
+
+        document.getElementById(`${p}-date`).addEventListener("input", updateSlicedSegment);
+      });
+
+      // Presets
+      document.querySelectorAll(".preset-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          applyPreset(btn.getAttribute("data-preset"));
+        });
+      });
+
+      // Quick Extension Buttons
+      function extendEndTime(secondsToAdd) {
+        const offset = getSelectedOffset();
+        const start = get12hInput('start', offset);
+        if (!start) return;
+        const newEnd = new Date(start.getTime() + secondsToAdd * 1000);
+        set12hInput('end', newEnd, offset);
+        updateSlicedSegment();
+      }
+
+      document.getElementById("btn-add-30s").addEventListener("click", () => extendEndTime(30));
+      document.getElementById("btn-add-60s").addEventListener("click", () => extendEndTime(60));
+      document.getElementById("btn-add-300s").addEventListener("click", () => extendEndTime(300));
+
+      // Export / Download
+      document.getElementById("btn-export").addEventListener("click", () => {
+        if (!state.slicedPoints || state.slicedPoints.length === 0) {
+          showAlert("Cannot export an empty track. Select a valid 12-hour time range containing GPS fixes.", "error");
+          return;
+        }
+
+        let filename = document.getElementById("output-filename").value.trim();
+        if (!filename.endsWith(".gpx")) filename += ".gpx";
+
+        const gpxXml = generateVirbEditGpx(state.slicedPoints);
+        downloadBlob(gpxXml, filename, "application/gpx+xml");
+      });
+
+      // Instructions Modal
+      const modal = document.getElementById("instructions-modal");
+      document.getElementById("btn-open-instructions").addEventListener("click", () => modal.classList.remove("hidden"));
+      document.getElementById("btn-close-instructions").addEventListener("click", () => modal.classList.add("hidden"));
+      document.getElementById("btn-modal-done").addEventListener("click", () => modal.classList.add("hidden"));
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.add("hidden");
+      });
+    });
+  </script>
+</body>
+</html>
